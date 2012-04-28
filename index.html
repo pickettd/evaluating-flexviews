@@ -227,9 +227,7 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 </ul><h2>Option two: Complete refresh MV on top of incremental refresh MV</h2>
 
 <ul>
-<li>
-<p>The first step is to create an incremental materialized table that will track the changes we care about:</p>
-
+<li>The first step is to create an incremental materialized table that will track the changes we care about:
 <ul>
 <li>The SQL for the first table we'll create is the following (stored in user_stat_helper.sql):<br>
 <code>CREATE TABLE flexviews.user_stat_helper AS</code><br>
@@ -319,7 +317,7 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 
 <ul>
 <li>It seems to me like the complete refresh method is the way to go on a query like this. The time to refresh is shorter, the design is simpler, and there are less moving pieces in the system that could possibly break. Using the complete refresh method means the system shouldn't need to run FlexCDC (the consumer application). Flexviews' incrementally refreshed views do work for certain types of queries and seem like they could be beneficial, but not this query.</li>
-</ul><h1>Appendix: Attempt to use just incrementally refreshed view</h1>
+</ul><h1>Appendix: Attempt to use just an incrementally refreshed view</h1>
 
 <ul>
 <li>From reading the Flexviews documentation, I assumed at first that just one incrementally refreshed table would be the correct solution. Unfortunately at this time it seems like an incremental view will not work for this type of query.</li>
