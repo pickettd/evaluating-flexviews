@@ -251,11 +251,9 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 <li><p>Tell Flexviews to create and enable the helper table: <code>mysql -u root -p &lt; converted_user_stat_helper.sql</code></p></li>
 </ul>
 </li>
-<li>
-<p>Finally we create a complete materialized table on top of the helper table:</p>
-
+<li>Finally we create a complete materialized table on top of the helper table:
 <ul>
-<li>The SQL for the view we want to materialize:
+<li>The SQL for the view we want to materialize: <br>
 <code>CREATE TABLE user_stat_combined AS SELECT user_id as user_id, </code><br>
 <code>COUNT(*) AS images, </code><br>
 <code>COUNT(DISTINCT grid_reference) AS gridsquares, </code><br>
