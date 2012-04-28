@@ -203,12 +203,12 @@ FROM gridimage_base GROUP BY user_id</code>
 
 <ul>
 <li>The SQL for the view we want to materialize:<br>
-<code>CREATE TABLE user_stat_complete AS SELECT user_id as user_id, <br>
-COUNT(*) AS images, <br>
-COUNT(DISTINCT grid_reference) AS gridsquares, <br>
-SUM(moderation_status = 'geograph') AS geographs, <br>
-MAX(gridimage_id) AS last_submitted <br>
-FROM gridimage_base GROUP BY user_id;</code>
+<code>CREATE TABLE user_stat_complete AS SELECT user_id as user_id, </code><br>
+<code>COUNT(*) AS images, </code><br>
+<code>COUNT(DISTINCT grid_reference) AS gridsquares, </code><br>
+<code>SUM(moderation_status = 'geograph') AS geographs, </code><br>
+<code>MAX(gridimage_id) AS last_submitted </code><br>
+<code>FROM gridimage_base GROUP BY user_id;</code>
 </li>
 <li>
 Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:<br>
@@ -231,31 +231,22 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 <p>The first step is to create an incremental materialized table that will track the changes we care about:</p>
 
 <ul>
-<li>The SQL for the first table we'll create is the following (stored in user_stat_helper.sql):
-<code>CREATE TABLE flexviews.user_stat_helper AS</code>
-<code>SELECT user_id AS user_id,</code>
-<code>grid_reference AS grid_reference,</code>
-<code>moderation_status AS moderation_status,</code>
+<li>The SQL for the first table we'll create is the following (stored in user_stat_helper.sql):<br>
+<code>CREATE TABLE flexviews.user_stat_helper AS</code><br>
+<code>SELECT user_id AS user_id,</code><br>
+<code>grid_reference AS grid_reference,</code><br>
+<code>moderation_status AS moderation_status,</code><br>
 <code>gridimage_id AS gridimage_id FROM geographic.gridimage_base;</code>
 </li>
-<li>
-<p>The results of using Flexviews' conversion tool (either the included convert.php or the hosted tool) are placed into converted_user_stat_helper.sql:</p>
-
-<p><code>CALL flexviews.create('flexviews', 'user_stat_helper', 'INCREMENTAL');</code></p>
-
-<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
-
-<p><code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'user_id', 'user_id');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'grid_reference', 'grid_reference');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'moderation_status', 'moderation_status');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'gridimage_id', 'gridimage_id');</code></p>
-
-<p><code>CALL flexviews.enable(@mvid);</code></p>
+<li>The results of using Flexviews' conversion tool (either the included convert.php or the hosted tool) are placed into converted_user_stat_helper.sql:<br>
+<code>CALL flexviews.create('flexviews', 'user_stat_helper', 'INCREMENTAL');</code><br>
+<code>SET @mvid := LAST_INSERT_ID();</code><br>
+<code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COLUMN', 'user_id', 'user_id');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COLUMN', 'grid_reference', 'grid_reference');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COLUMN', 'moderation_status', 'moderation_status');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COLUMN', 'gridimage_id', 'gridimage_id');</code><br>
+<code>CALL flexviews.enable(@mvid);</code>
 </li>
 <li><p>Tell Flexviews to create and enable the helper table: <code>mysql -u root -p &lt; converted_user_stat_helper.sql</code></p></li>
 </ul>
@@ -265,35 +256,24 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 
 <ul>
 <li>The SQL for the view we want to materialize:
-<code>CREATE TABLE user_stat_combined AS SELECT user_id as user_id, 
-COUNT(*) AS images, 
-COUNT(DISTINCT grid_reference) AS gridsquares, 
-SUM(moderation_status = 'geograph') AS geographs, 
-MAX(gridimage_id) AS last_submitted 
-FROM flexviews.user_stat_helper GROUP BY user_id;</code>
+<code>CREATE TABLE user_stat_combined AS SELECT user_id as user_id, </code><br>
+<code>COUNT(*) AS images, </code><br>
+<code>COUNT(DISTINCT grid_reference) AS gridsquares, </code><br>
+<code>SUM(moderation_status = 'geograph') AS geographs, </code><br>
+<code>MAX(gridimage_id) AS last_submitted </code><br>
+<code>FROM flexviews.user_stat_helper GROUP BY user_id;</code><br>
 </li>
-<li>
-<p>Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:</p>
-
-<p><code>CALL flexviews.create('flexviews', 'user_stat_combined', 'COMPLETE');</code></p>
-
-<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
-
-<p><code>CALL.flexviews.set_definition(@mvid, '</code></p>
-
-<p><code>SELECT user_id AS user_id,</code></p>
-
-<p><code>COUNT(*) AS images,</code></p>
-
-<p><code>COUNT(DISTINCT grid_reference) AS gridsquares,</code></p>
-
-<p><code>SUM(moderation_status = \'geograph\') AS geographs,</code></p>
-
-<p><code>MAX(gridimage_id) AS last_submitted FROM user_stat_helper</code></p>
-
-<p><code>GROUP BY user_id;');</code></p>
-
-<p><code>CALL flexviews.enable(@mvid);</code></p>
+<li>Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:<br>
+<code>CALL flexviews.create('flexviews', 'user_stat_combined', 'COMPLETE');</code><br>
+<code>SET @mvid := LAST_INSERT_ID();</code><br>
+<code>CALL.flexviews.set_definition(@mvid, '</code><br>
+<code>SELECT user_id AS user_id,</code><br>
+<code>COUNT(*) AS images,</code><br>
+<code>COUNT(DISTINCT grid_reference) AS gridsquares,</code><br>
+<code>SUM(moderation_status = \'geograph\') AS geographs,</code><br>
+<code>MAX(gridimage_id) AS last_submitted FROM user_stat_helper</code><br>
+<code>GROUP BY user_id;');</code><br>
+<code>CALL flexviews.enable(@mvid);</code>
 </li>
 <li><p>Tell Flexviews to create and enable the user_stat_combined table: <code>mysql -u root -p &lt; converted_user_stat_combined.sql</code></p></li>
 </ul>
@@ -345,52 +325,36 @@ FROM flexviews.user_stat_helper GROUP BY user_id;</code>
 
 <ul>
 <li>From reading the Flexviews documentation, I assumed at first that just one incrementally refreshed table would be the correct solution. Unfortunately at this time it seems like an incremental view will not work for this type of query.</li>
-<li>Desired SQL for view:
-<code>CREATE TABLE user_stat_incremental AS 
-SELECT user_id as user_id, 
-COUNT(*) AS images, 
-COUNT(DISTINCT grid_reference) AS gridsquares, 
-SUM(moderation_status = 'geograph') AS geographs, 
-MAX(gridimage_id) AS last_submitted 
-FROM geographic.gridimage_base GROUP BY user_id;</code>
+<li>Desired SQL for view: <br>
+<code>CREATE TABLE user_stat_incremental AS </code><br>
+<code>SELECT user_id as user_id, </code><br>
+<code>COUNT(*) AS images, </code><br>
+<code>COUNT(DISTINCT grid_reference) AS gridsquares, </code><br>
+<code>SUM(moderation_status = 'geograph') AS geographs, </code><br>
+<code>MAX(gridimage_id) AS last_submitted </code><br>
+<code>FROM geographic.gridimage_base GROUP BY user_id;</code>
 </li>
-<li>
-<p>First of all - I ran into a problem with the incremental refresh engine processing the logic of <code>moderation_status = 'geograph'</code> - this is probably something that can be worked around, but there is a more serious problem. Thus for the moment I will convert to a simplified view for illustration purposes. Converted SQL for incremental MV to be run in SQL (either from file or by hand):</p>
-
-<p><code>CALL flexviews.create('flexviews', 'user_stat_incremental', 'INCREMENTAL');</code></p>
-
-<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
-
-<p><code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'GROUP', 'user_id', 'user_id');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COUNT', '*', 'images');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'COUNT_DISTINCT', 'grid_reference', 'gridsquares');</code></p>
-
-<p><code>CALL flexviews.add_expr(@mvid,'MAX', 'gridimage_id', 'last_submitted');</code></p>
-
-<p><code>CALL flexviews.enable(@mvid);</code></p>
+<li>First of all - I ran into a problem with the incremental refresh engine processing the logic of <code>moderation_status = 'geograph'</code> - this is probably something that can be worked around, but there is a more serious problem. Thus for the moment I will convert to a simplified view for illustration purposes. Converted SQL for incremental MV to be run in SQL (either from file or by hand):<br>
+<code>CALL flexviews.create('flexviews', 'user_stat_incremental', 'INCREMENTAL');</code><br>
+<code>SET @mvid := LAST_INSERT_ID();</code><br>
+<code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code><br>
+<code>CALL flexviews.add_expr(@mvid,'GROUP', 'user_id', 'user_id');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COUNT', '*', 'images');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'COUNT_DISTINCT', 'grid_reference', 'gridsquares');</code><br>
+<code>CALL flexviews.add_expr(@mvid,'MAX', 'gridimage_id', 'last_submitted');</code><br>
+<code>CALL flexviews.enable(@mvid);</code>
 </li>
 <li><p>Make a change to the base table: `mysql -u root -p -e 'delete from geographic.gridimage_base where user_id = 5 limit 1;'</p></li>
 <li><p>Look up the table id for the incremental table: <code>mysql -u root -p -e "select mview_id from flexviews.mview where mview_name = 'user_stat_incremental';"</code></p></li>
 <li><p>Refresh the id you just looked up: <code>mysql -u root -p -e "CALL flexview.refresh(</code>ID HERE<code>,'BOTH', NULL);"</code></p></li>
 <li><p>Query the table to see what it shows for user_id 5 now: <code>mysql -u root -p -e 'select * from flexviews.user_stat_incremental where user_id = 5';</code></p></li>
-<li>
-<p>This is the result I get in all my tests:</p>
-
-<p><code>+----------+---------+--------+-------------+----------------+</code></p>
-
-<p><code>| mview$pk | user_id | images | gridsquares | last_submitted |</code></p>
-
-<p><code>+----------+---------+--------+-------------+----------------+</code></p>
-
-<p><code>|________4_|_______5_|______4_|___________3_|_____________17_|</code></p>
-
-<p><code>|____16384_|_______5_|_____-1_|___________3_|_____________17_|</code></p>
-
-<p><code>+----------+---------+--------+-------------+----------------+</code></p>
+<li>This is the result I get in all my tests:<br>
+<code>+----------+---------+--------+-------------+----------------+</code><br>
+<code>| mview$pk | user_id | images | gridsquares | last_submitted |</code><br>
+<code>+----------+---------+--------+-------------+----------------+</code><br>
+<code>|________4_|_______5_|______4_|___________3_|_____________17_|</code><br>
+<code>|____16384_|_______5_|_____-1_|___________3_|_____________17_|</code><br>
+<code>+----------+---------+--------+-------------+----------------+</code>
 </li>
 <li><p>Which seems to me to break the semantic meaning of the table. Thus my suggestion to use the complete type of table for this style of query. The complete type of view also any type of SQL to be used but in theory has performance tradeoffs. In my tests I still found the incremental refreshes to take longer than the complete refreshes against the base table.</p></li>
 </ul>
