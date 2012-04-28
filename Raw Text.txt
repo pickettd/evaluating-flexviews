@@ -186,6 +186,8 @@ Something that the Flexviews tutorials mention that I couldn't get to work in th
 
 Conclusion
 It seems to me like the complete refresh method is the way to go on a query like this. The time to refresh is shorter, the design is simpler, and there are less moving pieces in the system that could possibly break. Using the complete refresh method means the system shouldn't need to run FlexCDC (the consumer application). Flexviews' incrementally refreshed views do work for certain types of queries and seem like they could be beneficial, but not this query.
+
+
 Appendix: Attempt to use just incrementally refreshed view
 From reading the Flexviews documentation, I assumed at first that just one incrementally refreshed table would be the correct solution. Unfortunately at this time it seems like an incremental view will not work for this type of query.
 
