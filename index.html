@@ -342,10 +342,10 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 <code>CALL flexviews.add_expr(@mvid,'MAX', 'gridimage_id', 'last_submitted');</code><br>
 <code>CALL flexviews.enable(@mvid);</code>
 </li>
-<li><p>Make a change to the base table: `mysql -u root -p -e 'delete from geographic.gridimage_base where user_id = 5 limit 1;'</p></li>
-<li><p>Look up the table id for the incremental table: <code>mysql -u root -p -e "select mview_id from flexviews.mview where mview_name = 'user_stat_incremental';"</code></p></li>
-<li><p>Refresh the id you just looked up: <code>mysql -u root -p -e "CALL flexview.refresh(</code>ID HERE<code>,'BOTH', NULL);"</code></p></li>
-<li><p>Query the table to see what it shows for user_id 5 now: <code>mysql -u root -p -e 'select * from flexviews.user_stat_incremental where user_id = 5';</code></p></li>
+<li>Make a change to the base table: `mysql -u root -p -e 'delete from geographic.gridimage_base where user_id = 5 limit 1;'</li>
+<li>Look up the table id for the incremental table: <code>mysql -u root -p -e "select mview_id from flexviews.mview where mview_name = 'user_stat_incremental';"</code></li>
+<li>Refresh the id you just looked up: <code>mysql -u root -p -e "CALL flexview.refresh(</code>ID HERE<code>,'BOTH', NULL);"</code></li>
+<li>Query the table to see what it shows for user_id 5 now: <code>mysql -u root -p -e 'select * from flexviews.user_stat_incremental where user_id = 5';</code></li>
 <li>This is the result I get in all my tests:<br>
 <code>+----------+---------+--------+-------------+----------------+</code><br>
 <code>| mview$pk | user_id | images | gridsquares | last_submitted |</code><br>
@@ -354,7 +354,7 @@ Since this is a complete view, we'll create the conversion by hand by creating c
 <code>|____16384_|_______5_|_____-1_|___________3_|_____________17_|</code><br>
 <code>+----------+---------+--------+-------------+----------------+</code>
 </li>
-<li><p>Which seems to me to break the semantic meaning of the table. Thus my suggestion to use the complete type of table for this style of query. The complete type of view also any type of SQL to be used but in theory has performance tradeoffs. In my tests I still found the incremental refreshes to take longer than the complete refreshes against the base table.</p></li>
+<li>Which seems to me to break the semantic meaning of the table. Thus my suggestion to use the complete type of table for this style of query. The complete type of view also any type of SQL to be used but in theory has performance tradeoffs. In my tests I still found the incremental refreshes to take longer than the complete refreshes against the base table.</li>
 </ul>
       </section>
 
