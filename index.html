@@ -202,25 +202,25 @@ FROM gridimage_base GROUP BY user_id</code>
 <h2>Option one: MV using the complete refresh method</h2>
 
 <ul>
-<li>The SQL for the view we want to materialize:<br></br>
-<code>CREATE TABLE user_stat_complete AS SELECT user_id as user_id, <br></br>
-COUNT(*) AS images, <br></br>
-COUNT(DISTINCT grid_reference) AS gridsquares, <br></br>
-SUM(moderation_status = 'geograph') AS geographs, <br></br>
-MAX(gridimage_id) AS last_submitted <br></br>
+<li>The SQL for the view we want to materialize:<br>
+<code>CREATE TABLE user_stat_complete AS SELECT user_id as user_id, <br>
+COUNT(*) AS images, <br>
+COUNT(DISTINCT grid_reference) AS gridsquares, <br>
+SUM(moderation_status = 'geograph') AS geographs, <br>
+MAX(gridimage_id) AS last_submitted <br>
 FROM gridimage_base GROUP BY user_id;</code>
 </li>
 <li>
-Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:<br></br>
-<code>CALL flexviews.create('flexviews', 'user_stat_complete', 'COMPLETE');</code><br></br>
-<code>SET @mvid := LAST_INSERT_ID();</code><br></br>
-<code>CALL.flexviews.set_definition(@mvid, '</code><br></br>
-<code>SELECT user_id AS user_id,</code><br></br>
-<code>COUNT(*) AS images,</code><br></br>
-<code>COUNT(DISTINCT grid_reference) AS gridsquares,</code><br></br>
-<code>SUM(moderation_status = \'geograph\') AS geographs,</code><br></br>
-<code>MAX(gridimage_id) AS last_submitted FROM geographic.gridimage_base</code><br></br>
-<code>GROUP BY user_id;');</code><br></br>
+Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:<br>
+<code>CALL flexviews.create('flexviews', 'user_stat_complete', 'COMPLETE');</code><br>
+<code>SET @mvid := LAST_INSERT_ID();</code><br>
+<code>CALL.flexviews.set_definition(@mvid, '</code><br>
+<code>SELECT user_id AS user_id,</code><br>
+<code>COUNT(*) AS images,</code><br>
+<code>COUNT(DISTINCT grid_reference) AS gridsquares,</code><br>
+<code>SUM(moderation_status = \'geograph\') AS geographs,</code><br>
+<code>MAX(gridimage_id) AS last_submitted FROM geographic.gridimage_base</code><br>
+<code>GROUP BY user_id;');</code><br>
 <code>CALL flexviews.enable(@mvid);</code>
 </li>
 <li><p>Tell Flexviews to create and enable the complete_user_stat table: <code>mysql -u root -p &lt; converted_user_stat_complete.sql</code></p></li>
