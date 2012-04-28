@@ -1,0 +1,413 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Evaluating Flexviews by pickettd</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/pickettd/evaluating-flexviews">Fork On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/pickettd/evaluating-flexviews/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/pickettd/evaluating-flexviews/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Evaluating Flexviews</h1>
+          <p>A step-by-step evaluation of Flexviews using Ubuntu 11.10, Percona Server 5.5, and data from geograph.org.uk</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/pickettd">pickettd</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>Background info</h1>
+
+<ul>
+<li>Flexviews: <a href="http://code.google.com/p/flexviews/">http://code.google.com/p/flexviews/</a>
+</li>
+<li>Ubuntu 11.10 vm image (used amd64): <a href="http://www.thoughtpolice.co.uk/vmware/#ubuntu11.10">http://www.thoughtpolice.co.uk/vmware/#ubuntu11.10</a>
+</li>
+<li>VMware Player: <a href="http://www.vmware.com/products/player/">http://www.vmware.com/products/player/</a>
+</li>
+<li>Data for tests (used gridimage_base): <a href="http://data.geograph.org.uk/dumps/">http://data.geograph.org.uk/dumps/</a>
+</li>
+<li>Help series of blog posts explaining Flexviews, installation, and usage:
+
+<ul>
+<li><a href="http://www.mysqlperformanceblog.com/2011/03/23/using-flexviews-part-one-introduction-to-materialized-views/">http://www.mysqlperformanceblog.com/2011/03/23/using-flexviews-part-one-introduction-to-materialized-views/</a></li>
+<li><a href="http://www.mysqlperformanceblog.com/2011/03/25/using-flexviews-part-two-change-data-capture/">http://www.mysqlperformanceblog.com/2011/03/25/using-flexviews-part-two-change-data-capture/</a></li>
+<li><a href="http://www.mysqlperformanceblog.com/2011/04/04/flexviews-part-3-improving-query-performance-using-materialized-views/">http://www.mysqlperformanceblog.com/2011/04/04/flexviews-part-3-improving-query-performance-using-materialized-views/</a></li>
+</ul>
+</li>
+<li>Example SQL statement describing a desired materialized view:
+<code>CREATE VIEW user_stat AS SELECT user_id as user_id, 
+COUNT(*) AS images, 
+COUNT(DISTINCT grid_reference) AS gridsquares, 
+SUM(moderation_status = 'geograph') AS geographs, 
+MAX(gridimage_id) AS last_submitted 
+FROM gridimage_base GROUP BY user_id</code>
+</li>
+</ul><h1>Setup</h1>
+
+<h2>First get the required software and data</h2>
+
+<ul>
+<li>Download VMware Player and Ubuntu 11.10 image.</li>
+<li>Install VMware Player and open the image.</li>
+<li>Configure the image for 2 processors and left the rest as default.</li>
+<li>Boot up the Ubuntu image inside VMware Player and login as the default user.</li>
+<li>Flexviews requires PHP and several extensions, so install all that:
+
+<ul>
+<li><code>sudo apt-get install php5</code></li>
+<li><code>sudo apt-get install php-pear</code></li>
+<li><code>sudo pear install Console_Getopt</code></li>
+<li><code>sudo apt-get install php5-mysql</code></li>
+<li>For the pcntl php extension I followed the instructions at <a href="http://www.crimulus.com/2010/07/30/howto-enable-pcntl-in-ubuntu-php-installations/">http://www.crimulus.com/2010/07/30/howto-enable-pcntl-in-ubuntu-php-installations/</a>:
+
+<ul>
+<li><code>sudo apt-get install php5-dev</code></li>
+<li><code>sudo apt-get install the dpkg-dev</code></li>
+<li><code>sudo apt-get source php5</code></li>
+<li>
+<code>cd php5-</code>(WHATEVER_RELEASE)<code>/ext/pcntl</code>
+</li>
+<li><code>sudo phpize</code></li>
+<li><code>sudo ./configure</code></li>
+<li><code>sudo make</code></li>
+<li>Figure out where your .so files are (they're in the subfolder named by a series of numbers): <code>ls /usr/lib/php5/</code>
+</li>
+<li>
+<code>sudo cp modules/pcntl.so /usr/lib/php5/</code>&lt;WHEREVER_YOUR_SO_FILES_ARE&gt;<code>/</code>
+</li>
+<li><code>echo "extension=pcntl.so" | sudo tee /etc/php5/conf.d/pcntl.ini</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Add the Percona public keys and repositories as per <a href="http://www.percona.com/doc/percona-server/5.5/installation/apt_repo.html">http://www.percona.com/doc/percona-server/5.5/installation/apt_repo.html</a>
+
+<ul>
+<li><code>gpg --keyserver  hkp://keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A</code></li>
+<li><code>gpg -a --export CD2EFD2A | sudo apt-key add -</code></li>
+<li><code>echo "deb http://repo.percona.com/apt oneiric main" | sudo tee -a /etc/apt/sources.list</code></li>
+<li><code>echo "deb-src http://repo.percona.com/apt oneiric main" | sudo tee -a /etc/apt/sources.list</code></li>
+<li><code>sudo apt-get update</code></li>
+</ul>
+</li>
+<li>Install Percona Server: <code>sudo apt-get install percona-server-server-5.5</code>
+</li>
+<li>You should get the most up to date Flexviews (with bugfixes not found in the tarball):
+
+<ul>
+<li>Install subversion: <code>sudo apt-get install subversion</code>
+</li>
+<li>Checkout the Flexviews source: <code>svn checkout http://flexviews.googlecode.com/svn/trunk/ flexviews</code>
+</li>
+<li>Make bugfix suggested in issue #10 (<a href="http://code.google.com/p/flexviews/issues/detail?id=10">http://code.google.com/p/flexviews/issues/detail?id=10</a>):
+
+<ul>
+<li>Change line (as of r245 of the source) #636 from <code>}</code> to <code>$valList ='';}</code>
+</li>
+</ul>
+</li>
+<li>The php script to convert SQL to Flexviews statements requires a php parser so get that: <code>wget http://php-sql-parser.googlecode.com/svn/trunk/php-sql-parser.php</code>
+</li>
+</ul>
+</li>
+<li>Get the Geograph database and import it:
+
+<ul>
+<li><code>mkdir ~/data</code></li>
+<li><code>cd ~/data</code></li>
+<li><code>wget http://data.geograph.org.uk/dumps/gridimage_base.mysql.gz</code></li>
+<li><code>wget http://data.geograph.org.uk/dumps/gridimage_base.schema</code></li>
+<li><code>gunzip gridimage_base.mysql.gz</code></li>
+<li>Use mysql to create a database for the data to be imported to: <code>mysql -u root -p -e 'create database geographic;'</code>
+</li>
+<li>Import the downloaded data into the new database: <code>mysql -u root -p geographic &lt; gridimage_base.mysql</code>
+</li>
+</ul>
+</li>
+</ul><h2>Configure</h2>
+
+<ul>
+<li>Percona server does not create a default my.conf and Flexviews requires a couple particular options set anyway (as described in <a href="http://code.google.com/p/flexviews/wiki/Requirements">http://code.google.com/p/flexviews/wiki/Requirements</a>):
+
+<ul>
+<li>I chose to use the my-large.cnf example file as a start:
+
+<ul>
+<li><code>sudo cp /usr/share/mysql/my-large.cnf /etc/my.cnf</code></li>
+<li>Edit /etc/my.cnf to make the following changes and additions:
+
+<ul>
+<li>Change binlog_format from mixed to row</li>
+<li>Make sure the server_id is set to a unique value (I set mine to 999)</li>
+<li>Add the line <code>transaction-isolation = READ-COMMITTED</code>
+</li>
+</ul>
+</li>
+<li>Change the ownership of the configuration file to the mysql user: <code>sudo chown mysql:mysql /etc/my.cnf</code> </li>
+</ul>
+</li>
+<li>Restart Percona to have it load the new configuration: <code>sudo service mysql restart</code>
+</li>
+</ul>
+</li>
+<li>The Flexviews component FlexCDC needs to be configured and installed:
+
+<ul>
+<li><code>cd ~/flexviews/consumer</code></li>
+<li>Copy the example config file into place: <code>cp consumer.ini.example consumer.ini</code>
+</li>
+<li>Edit the config file as appropriate (the main required change is to put in the username/password for the sql account - in this example the user is just root and the password is whatever you set on the installation of Percona Server).</li>
+<li><code>php ./setup_flexcdc.php</code></li>
+<li>You can verify that the setup worked by running: <code>mysql -u root -p -e 'select * from flexviews.binlog_consumer_status\G'</code> and seeing that consumer has found the binary logs</li>
+</ul>
+</li>
+<li>Note: you might want to restart the virtual machine here. I have in my notes that I did and I ran into problems with php until I did on my second run through when I didn't. Maybe one just needs to restart some particular service?</li>
+<li>The last configuration step is to start the binary log consumer running and make sure it is monitoring changes from the gridimage table:
+
+<ul>
+<li>The consumer_safe script will launch the log consumer and handle restarting it (send a HUP signal to it and php to kill it): <code>~/flexviews/consumer/consumer_safe.sh &amp;</code>
+</li>
+<li>Configure consumer to monitor the gridimage table for changes: <code>php add_table.php --schema=geographic --table=gridimage_base</code>
+</li>
+<li>Install the Flexviews schema and sprocs: <code>mysql -u root -p &lt; ~/flexviews/install.sql</code>
+</li>
+</ul>
+</li>
+</ul><h1>Create the materialized view</h1>
+
+<h2>Option one: MV using the complete refresh method</h2>
+
+<ul>
+<li>The SQL for the view we want to materialize:
+<code>CREATE TABLE user_stat_complete AS SELECT user_id as user_id, 
+COUNT(*) AS images, 
+COUNT(DISTINCT grid_reference) AS gridsquares, 
+SUM(moderation_status = 'geograph') AS geographs, 
+MAX(gridimage_id) AS last_submitted 
+FROM gridimage_base GROUP BY user_id;</code>
+</li>
+<li>
+<p>Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:</p>
+
+<p><code>CALL flexviews.create('flexviews', 'user_stat_complete', 'COMPLETE');</code></p>
+
+<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
+
+<p><code>CALL.flexviews.set_definition(@mvid, '</code></p>
+
+<p><code>SELECT user_id AS user_id,</code></p>
+
+<p><code>COUNT(*) AS images,</code></p>
+
+<p><code>COUNT(DISTINCT grid_reference) AS gridsquares,</code></p>
+
+<p><code>SUM(moderation_status = \'geograph\') AS geographs,</code></p>
+
+<p><code>MAX(gridimage_id) AS last_submitted FROM geographic.gridimage_base</code></p>
+
+<p><code>GROUP BY user_id;');</code></p>
+
+<p><code>CALL flexviews.enable(@mvid);</code></p>
+</li>
+<li><p>Tell Flexviews to create and enable the complete_user_stat table: <code>mysql -u root -p &lt; converted_user_stat_complete.sql</code></p></li>
+</ul><h2>Option two: Complete refresh MV on top of incremental refresh MV</h2>
+
+<ul>
+<li>
+<p>The first step is to create an incremental materialized table that will track the changes we care about:</p>
+
+<ul>
+<li>The SQL for the first table we'll create is the following (stored in user_stat_helper.sql):
+<code>CREATE TABLE flexviews.user_stat_helper AS</code>
+<code>SELECT user_id AS user_id,</code>
+<code>grid_reference AS grid_reference,</code>
+<code>moderation_status AS moderation_status,</code>
+<code>gridimage_id AS gridimage_id FROM geographic.gridimage_base;</code>
+</li>
+<li>
+<p>The results of using Flexviews' conversion tool (either the included convert.php or the hosted tool) are placed into converted_user_stat_helper.sql:</p>
+
+<p><code>CALL flexviews.create('flexviews', 'user_stat_helper', 'INCREMENTAL');</code></p>
+
+<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
+
+<p><code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'user_id', 'user_id');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'grid_reference', 'grid_reference');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'moderation_status', 'moderation_status');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COLUMN', 'gridimage_id', 'gridimage_id');</code></p>
+
+<p><code>CALL flexviews.enable(@mvid);</code></p>
+</li>
+<li><p>Tell Flexviews to create and enable the helper table: <code>mysql -u root -p &lt; converted_user_stat_helper.sql</code></p></li>
+</ul>
+</li>
+<li>
+<p>Finally we create a complete materialized table on top of the helper table:</p>
+
+<ul>
+<li>The SQL for the view we want to materialize:
+<code>CREATE TABLE user_stat_combined AS SELECT user_id as user_id, 
+COUNT(*) AS images, 
+COUNT(DISTINCT grid_reference) AS gridsquares, 
+SUM(moderation_status = 'geograph') AS geographs, 
+MAX(gridimage_id) AS last_submitted 
+FROM flexviews.user_stat_helper GROUP BY user_id;</code>
+</li>
+<li>
+<p>Since this is a complete view, we'll create the conversion by hand by creating converted_user_stat.sql as:</p>
+
+<p><code>CALL flexviews.create('flexviews', 'user_stat_combined', 'COMPLETE');</code></p>
+
+<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
+
+<p><code>CALL.flexviews.set_definition(@mvid, '</code></p>
+
+<p><code>SELECT user_id AS user_id,</code></p>
+
+<p><code>COUNT(*) AS images,</code></p>
+
+<p><code>COUNT(DISTINCT grid_reference) AS gridsquares,</code></p>
+
+<p><code>SUM(moderation_status = \'geograph\') AS geographs,</code></p>
+
+<p><code>MAX(gridimage_id) AS last_submitted FROM user_stat_helper</code></p>
+
+<p><code>GROUP BY user_id;');</code></p>
+
+<p><code>CALL flexviews.enable(@mvid);</code></p>
+</li>
+<li><p>Tell Flexviews to create and enable the user_stat_combined table: <code>mysql -u root -p &lt; converted_user_stat_combined.sql</code></p></li>
+</ul>
+</li>
+</ul><h1>Test</h1>
+
+<ul>
+<li>The view of flexviews.user_stat_helper we created is an incrementally refreshed view of a subset of columns from the gridimage_base table. The flexviews.user_stat table is a materialized view that relies on essentially building a new table from the information in the helper table everytime it is refreshed. So the process of testing is to make changes in the geographic.gridimage_base table, refresh the flexviews.user_stat_helper table, refresh the flexviews.user_stat_combined table, refresh the flexviews.complete table, and check the results:
+
+<ul>
+<li>`mysql -u root -p -e 'DELETE FROM geographic.gridimage_base WHERE user_id = 5 LIMIT 5;'</li>
+<li>For option 1:
+
+<ul>
+<li>
+<code>mysql -u root -p -e "CALL flexviews.refresh(</code>&lt;look up complete mview id and put it here&gt;<code>, 'COMPLETE'. NULL);"</code>
+</li>
+<li><code>mysql -u root -p -e 'SELECT * from flexviews.user_stat_complete where user_id = 5;'</code></li>
+</ul>
+</li>
+<li>For option 2:
+
+<ul>
+<li>
+<code>mysql -u root -p -e "CALL flexviews.refresh(</code>&lt;look up incremental mview id and put it here&gt;<code>, 'BOTH'. NULL);"</code>
+</li>
+<li>
+<code>mysql -u root -p -e "CALL flexviews.refresh(</code>&lt;look up combined mview id and put it here&gt;<code>, 'COMPLETE'. NULL);"</code>
+</li>
+<li><code>mysql -u root -p -e 'SELECT * from flexviews.user_stat_combined where user_id = 5;'</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>The time to refresh a complete view is a about 10 seconds (for both the complete view on top of the incremental and the complete view on top of the base data). The time to refresh the incremental view was about 30 seconds. See notes in the last section about using just an incremental view.</li>
+</ul><h1>Helpful notes</h1>
+
+<ul>
+<li>One time when testing these instructions I got a package error when trying to install php5-mysql after I had installed percona-server. If that happens to you read this <a href="https://bugs.launchpad.net/percona-server/+bug/735463">https://bugs.launchpad.net/percona-server/+bug/735463</a>.</li>
+<li>If you want to create materialized views in databases OTHER than the 'flexviews' database, you'll need to edit the permissions granted to the flexviews user in the flexviews/install_schema.inc file (line 39).</li>
+<li>I seemed to get a more correct conversion using the online Flexviews tool (<a href="http://flexviews.sourceforge.net/convert.php">http://flexviews.sourceforge.net/convert.php</a>) rather than convert.php that is bundled with the source.</li>
+<li>Something that the Flexviews tutorials mention that I couldn't get to work in the current is the get_id stored procedure. I just worked around it by querying the flexviews.mview table for the correct mview_id and using that for the refresh commands. You could probably automate this in scripts by using a SELECT command to search for the table you want to refresh, e.g. : <code>mysql -u root -p -e "select mview_id from flexviews.mview where mview_name = 'user_stat_combined';"</code>
+</li>
+</ul><h1>Conclusion</h1>
+
+<ul>
+<li>It seems to me like the complete refresh method is the way to go on a query like this. The time to refresh is shorter, the design is simpler, and there are less moving pieces in the system that could possibly break. Using the complete refresh method means the system shouldn't need to run FlexCDC (the consumer application). Flexviews' incrementally refreshed views do work for certain types of queries and seem like they could be beneficial, but not this query.</li>
+</ul><h1>Appendix: Attempt to use just incrementally refreshed view</h1>
+
+<ul>
+<li>From reading the Flexviews documentation, I assumed at first that just one incrementally refreshed table would be the correct solution. Unfortunately at this time it seems like an incremental view will not work for this type of query.</li>
+<li>Desired SQL for view:
+<code>CREATE TABLE user_stat_incremental AS 
+SELECT user_id as user_id, 
+COUNT(*) AS images, 
+COUNT(DISTINCT grid_reference) AS gridsquares, 
+SUM(moderation_status = 'geograph') AS geographs, 
+MAX(gridimage_id) AS last_submitted 
+FROM geographic.gridimage_base GROUP BY user_id;</code>
+</li>
+<li>
+<p>First of all - I ran into a problem with the incremental refresh engine processing the logic of <code>moderation_status = 'geograph'</code> - this is probably something that can be worked around, but there is a more serious problem. Thus for the moment I will convert to a simplified view for illustration purposes. Converted SQL for incremental MV to be run in SQL (either from file or by hand):</p>
+
+<p><code>CALL flexviews.create('flexviews', 'user_stat_incremental', 'INCREMENTAL');</code></p>
+
+<p><code>SET @mvid := LAST_INSERT_ID();</code></p>
+
+<p><code>CALL flexviews.add_table(@mvid,'geographic', 'gridimage_base','alias', NULL);</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'GROUP', 'user_id', 'user_id');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COUNT', '*', 'images');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'COUNT_DISTINCT', 'grid_reference', 'gridsquares');</code></p>
+
+<p><code>CALL flexviews.add_expr(@mvid,'MAX', 'gridimage_id', 'last_submitted');</code></p>
+
+<p><code>CALL flexviews.enable(@mvid);</code></p>
+</li>
+<li><p>Make a change to the base table: `mysql -u root -p -e 'delete from geographic.gridimage_base where user_id = 5 limit 1;'</p></li>
+<li><p>Look up the table id for the incremental table: <code>mysql -u root -p -e "select mview_id from flexviews.mview where mview_name = 'user_stat_incremental';"</code></p></li>
+<li><p>Refresh the id you just looked up: <code>mysql -u root -p -e "CALL flexview.refresh(</code>ID HERE<code>,'BOTH', NULL);"</code></p></li>
+<li><p>Query the table to see what it shows for user_id 5 now: <code>mysql -u root -p -e 'select * from flexviews.user_stat_incremental where user_id = 5';</code></p></li>
+<li>
+<p>This is the result I get in all my tests:</p>
+
+<p><code>+----------+---------+--------+-------------+----------------+</code></p>
+
+<p><code>| mview$pk | user_id | images | gridsquares | last_submitted |</code></p>
+
+<p><code>+----------+---------+--------+-------------+----------------+</code></p>
+
+<p><code>|________4_|_______5_|______4_|___________3_|_____________17_|</code></p>
+
+<p><code>|____16384_|_______5_|_____-1_|___________3_|_____________17_|</code></p>
+
+<p><code>+----------+---------+--------+-------------+----------------+</code></p>
+</li>
+<li><p>Which seems to me to break the semantic meaning of the table. Thus my suggestion to use the complete type of table for this style of query. The complete type of view also any type of SQL to be used but in theory has performance tradeoffs. In my tests I still found the incremental refreshes to take longer than the complete refreshes against the base table.</p></li>
+</ul>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    
+  </body>
+</html>
